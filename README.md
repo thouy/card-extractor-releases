@@ -1,35 +1,47 @@
-# card-extractor — 배포용 저장소
+# card-extractor — Release Distribution
 
-**PDF 거래내역 추출기**의 릴리스 산출물만 두는 저장소입니다. 소스 코드는 별도 비공개
-저장소에 있습니다.
+Release artifacts for **PDF 거래내역 추출기** (a desktop app that extracts Korean bank
+and credit-card statement PDFs into Excel). The source code lives in a separate
+private repository.
 
-## 왜 저장소를 나눴나
+## Why the split
 
-앱은 `electron-updater`로 이 저장소의 **GitHub Releases**를 확인해 업데이트를 받습니다.
-GitHub Releases는 저장소가 비공개면 다운로드에 토큰이 필요한데, 그 토큰을 앱에 넣으면
-사용자가 꺼내 볼 수 있어 공개한 것과 같아집니다. 그래서 **코드는 비공개, 산출물만 공개**로
-분리했습니다.
+The app checks this repository's **GitHub Releases** for updates via
+`electron-updater`. Releases in a private repository require a token to download,
+and any token shipped inside the app can be extracted by its users — which makes it
+public in practice. So the code stays private and only the build artifacts are
+published here.
 
-## 릴리스에 포함되는 파일
+## Release contents
 
-| 파일 | 용도 |
+| File | Purpose |
 |---|---|
-| `card-extractor-setup-<버전>.exe` | NSIS 인스톨러 (자동 업데이트 대상) |
-| `card-extractor-setup-<버전>.exe.blockmap` | 차등 다운로드용 블록맵 |
-| `card-extractor-<버전>.exe` | 포터블 (설치 없이 실행) |
-| `latest.yml` | 업데이터가 읽는 버전 메타 (sha512·size 포함) |
+| `card-extractor-setup-<version>.exe` | NSIS installer — the auto-update target |
+| `card-extractor-setup-<version>.exe.blockmap` | Block map for differential downloads |
+| `card-extractor-<version>.exe` | Portable build (no installation) |
+| `latest.yml` | Update metadata the updater reads (includes sha512 and size) |
 
-`latest.yml`의 해시·크기가 실제 exe와 다르면 업데이트가 검증에서 실패하므로,
-**세 파일은 항상 같은 빌드에서 나온 것을 함께** 올려야 합니다.
+`latest.yml` carries the installer's sha512 and byte size. If they disagree with the
+uploaded `.exe`, the updater fails verification and silently refuses the update —
+so **always publish all three from the same build**.
 
-## 배포 방법
+## How releases are published
 
-소스 저장소에서:
+From the source repository:
 
 ```bash
 cd electron
-GH_TOKEN=<repo Contents 쓰기 권한 토큰> npm run build:win -- --publish always
+GH_TOKEN=<token with Contents: write on this repo> npm run build:win -- --publish always
 ```
 
-electron-builder가 draft 릴리스를 만들고 자산명을 ASCII로 정규화해 올립니다.
-확인 후 GitHub에서 **Publish release**를 눌러 공개합니다.
+`electron-builder` creates a **draft** release and normalizes asset names to ASCII
+(the local build output uses a Korean filename; GitHub assets do not). Review the
+draft, then press **Publish release** to make it visible to the updater.
+
+## How the app updates
+
+- Checks once, silently, ~15 seconds after launch, and on demand via
+  **File → 업데이트 확인**
+- The silent check only speaks up when a newer version exists — being up to date or
+  failing to reach GitHub produces no dialog
+- Downloads only after the user agrees; installs on restart or on app quit
